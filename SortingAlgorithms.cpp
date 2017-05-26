@@ -1,8 +1,9 @@
 /*----------------------------------------------------------------------------**
-                  Written by Matthew Benitez as a personal project.
+                Written by Matthew Benitez as a personal project.
   Program runs sorting algorithms on randomized vector of integers, calculates 
   runtime over user-specified number of runs on vector of user-specified size,
   then reports avg. runtime of each algorithm and total runtime over all runs.
+  Program currently uses Bubble, Insertion, Selection, Merge, and Quick sorts.
 **----------------------------------------------------------------------------*/
 
 #include <iostream>
@@ -18,33 +19,33 @@ using namespace std;
 /*----------------------------Parameters for Program--------------------------*/
 // default values yield total program runtime of ~10 seconds.
 
-// determines if initial randomized vector is to be printed
-bool wantToPrintInit = false; // default: false
+// determines if initial randomized vector is to be printed (default: false)
+bool wantToPrintInit = false;
+// determines how many elements in array to be sorted (default: 5000)
+int numbersToSort = 5000;       
+// determines how many runs to do, reports avg. time (default: 15)
+int runs = 15;              
 
-// determines how many elements in array to be sorted
-int numbersToSort = 5000;    // default: 5000     
-
-// determines how many runs to do, reports avg. time
-int runs = 20;               // default: 20
-
-// turns algorithms "on" or "off", in order of Bub, Ins, Sel, Mer (default: 1 1 1 1)
+// turns algorithms "on" or "off", 
+// in order of Bubble, Insertion, Selection, Merge, Quick (default: 1 1 1 1 1)
 bool runAlgs[] = {
-/*B  I  S  M*/
-  1, 1, 1, 1
+/*B  I  S  M  Q */
+  1, 1, 1, 1, 1
 };
-// helps for direct comparison of certain algorithms with data sizes too large for others.
+// helps for direct comparison of algorithms with vecSizes too large for others.
 
-// special test mode to find the vecSize where algorithms become faster than one another.
-// lower is starting point of vecSize (non-negative)
-// upper is max cap of vecSize, where test terminates (recommend no more than 10000)
-// grain is how much vecSize increments by on each iteration.
-// testRuns is how many times each algorithm is run per vecSize.
+// special test mode to find vecSize where algs. become faster than one another.
+// lower is starting point of vecSize (default: 100)
+// upper is max cap of vecSize, where test terminates (default: 5000)
+// grain is how much vecSize increments by on each iteration. (default: 100)
+// testRuns is how many times each algorithm is run per vecSize. (default: 5)
+//   higher value of testRuns helps to remove outlier data, but takes more time.
 // test mode is also parameterized by wantToPrintInit, and runAlgs.
-bool testMode = true;    // default: false
-int lower = 100;            // default: 100 (if < 1, defaults to 50).
-int upper = 5000;           // default: 5000
-int grain = 100;            // default: 100
-int testRuns = 10;           // default: 5
+bool testMode = false;
+int lower = 100;            
+int upper = 5000;      
+int grain = 100;            
+int testRuns = 5;   
 
 /*---------------------Vector and Housekeeping Functions----------------------*/
 // overloaded printVector()
@@ -78,23 +79,31 @@ vector<int> initializeVector(int vecSize){
   }
   return theVec;
 } // end initializeVector()
-vector<string> runRace(double timeBub, double timeIns, double timeSel, double timeMer){
+vector<string> runRace(double timeBub, double timeIns, double timeSel, double timeMer, double timeQck){
+  // function to check and report which algorithms ran faster than others.
   vector<string> Places;
-  vector<double> runtimes {timeBub, timeIns, timeSel, timeMer};
+  vector<double> runtimes {timeBub, timeIns, timeSel, timeMer, timeQck};
   sort(runtimes.begin(), runtimes.end());
   while(!runtimes.empty()){
-    if(runtimes.front() == timeBub)
-      Places.push_back("Bubble Sort");
-    if(runtimes.front() == timeIns)
-      Places.push_back("Insertion Sort");
-    if(runtimes.front() == timeSel)
-      Places.push_back("Selection Sort");
+    // case where certain algorithms are not run, disregard them.
+    if(runtimes.front() == 0){
+      runtimes.erase(runtimes.begin());
+      continue;
+    }
+    if(runtimes.front() == timeQck)
+      Places.push_back("Quick Sort");
     if(runtimes.front() == timeMer)
       Places.push_back("Merge Sort");
+    if(runtimes.front() == timeSel)
+      Places.push_back("Selection Sort");
+    if(runtimes.front() == timeIns)
+      Places.push_back("Insertion Sort");
+    if(runtimes.front() == timeBub)
+      Places.push_back("Bubble Sort");
     runtimes.erase(runtimes.begin());
   }
   return Places;
-}
+} // end runRace();
 
 /*-----------------------------Sorting Algorithms-----------------------------*/
 void BubbleSort(vector<int> theArray){
@@ -203,13 +212,42 @@ vector<int> MergeSort(vector<int> theArray){
     return Merge(left, right);
   } // end else
 } // end MergeSort()
+void QuickSort(vector<int> theArray, int left, int right){
+  // initialize index variables
+  int leftArrow = left, rightArrow = right;
+  // initialize pivot as int at the middle of the array.
+  int pivot = theArray[(left + right)/2];
+  // temp to be used when swapping ints
+  int temp = 0; 
+  // begin partitioning, terminating after index variables meet.
+  while(leftArrow <= rightArrow){
+    while(theArray[leftArrow] < pivot)
+      leftArrow++;
+    while(theArray[rightArrow] > pivot)
+      rightArrow--;
+    if(leftArrow <= rightArrow){
+      // swap the two numbers and move over the indices.
+      temp = theArray[leftArrow];
+      theArray[leftArrow] = theArray[rightArrow];
+      theArray[rightArrow] = temp;
+      leftArrow++;
+      rightArrow--;
+    }
+  }
+  // perform recursion if the array changed.
+  if(left < rightArrow){
+    QuickSort(theArray, left, rightArrow);
+  }
+  if(leftArrow < right){
+    QuickSort(theArray, leftArrow, right);
+  }
+} // end QuickSort();
 
 /*-------------------------Special Tester Mode Function-----------------------*/
 
 void runTest(int lower, int upper, int grain) {
   if(lower < 1) 
-    lower = 50;
-  bool firstRun = true;
+    lower = 100;
   // vec and enum keep track of which algorithms outperform others in "race"
   // keeps track of the "place" of each algorithm by assigning "runner number"
   vector<string> CurrentRun;
@@ -221,7 +259,7 @@ void runTest(int lower, int upper, int grain) {
   for(int i = lower; i <= upper; i += grain){
     numbersToSort = i;
     // Initialize timer variables for each algorithm.
-    double timeSel = 0, timeBub = 0, timeIns = 0, timeMer = 0, timeTot = 0; \
+    double timeBub = 0, timeIns = 0, timeSel = 0, timeMer = 0, timeQck = 1, timeTot = 0;
     // Initialize the Vector with variable size.
     vector<int> myVec = initializeVector(numbersToSort); 
     if(wantToPrintInit){
@@ -254,21 +292,28 @@ void runTest(int lower, int upper, int grain) {
         MergeSort(myVec);
         endMer = chrono::steady_clock::now();
       }
+      auto endQck = endMer;
+      if(runAlgs[4] == 1){
+        QuickSort(myVec, 0, numbersToSort-1);
+        endQck = chrono::steady_clock::now();
+      }
 /*----------------------Calculate Runtime of Each Algorithm-------------------*/
       auto diffBub = endBub - startT;
       auto diffIns = endIns - endBub;
       auto diffSel = endSel - endIns;
       auto diffMer = endMer - endSel;
-      auto diffTot = endMer - startT;
+      auto diffQck = endQck - endMer;
+      auto diffTot = endQck - startT;
       timeBub += chrono::duration <double, milli> (diffBub).count();
       timeIns += chrono::duration <double, milli> (diffIns).count();
       timeSel += chrono::duration <double, milli> (diffSel).count();
       timeMer += chrono::duration <double, milli> (diffMer).count();
+      timeQck += chrono::duration <double, milli> (diffQck).count();
       
 /*-------------------------------Print Key Points-----------------------------*/
     }// end for testRuns
     // No need to divide times by number of runs, just compare.
-    CurrentRun = runRace(timeBub,timeIns,timeSel,timeMer);
+    CurrentRun = runRace(timeBub,timeIns,timeSel,timeMer,timeQck);
     // only print critical points, where the positions change.
     if(CurrentRun != LastRun){
       cout << "[" << numbersToSort << "]: " << endl;
@@ -289,69 +334,85 @@ int main() {
     runTest(lower, upper, grain);
     return 0;
   }
-  double timeSel = 0, timeBub = 0, timeIns = 0, timeMer = 0, timeTot = 0; // Initialize timer variables for each algorithm.
-  vector<int> myVec = initializeVector(numbersToSort); // Initialize the Vector with variable size.
+  // Initialize timer variables for each algorithm.
+  double timeSel = 0, timeBub = 0, timeIns = 0, timeMer = 0, timeQck = 0, timeTot = 0;
+  // Initialize the Vector with variable size.
+  vector<int> myVec = initializeVector(numbersToSort); 
+
   printDivider();
   if(wantToPrintInit){
-    cout << "           -------------------Vector:--------------------" << endl;
+    cout << "[Initial Vector:]";
     printVector(myVec); // Print out the initial vector.
     printDivider();
   } // print initial vector of randomized ints.
-  cout << "Running sorting algorithm(s) over a " << numbersToSort << "-element array " << runs << " time(s):" << endl;
+  cout << "Running sorting algorithm(s) on a " << numbersToSort << "-element array " << runs << " time(s):" << endl;
   printDivider();
   
 /*-------------------Run Sorting Algorithms and Store Times------------------*/
   for(int i = 0; i < runs; i++){
     auto startT = chrono::steady_clock::now();
     
-    auto endBub = startT; // by default, runtime zero unless alg is run.
+     // by default, runtime zero unless algorithm is run.
+    auto endBub = startT;
     if(runAlgs[0] == 1){
       BubbleSort(myVec);
       endBub = chrono::steady_clock::now();
-    } // runs algo and stores time.
+    } // runs algorithm and stores time.
     
-    auto endIns = endBub; // by default, runtime zero unless alg is run.
+    auto endIns = endBub;
     if(runAlgs[1] == 1){
       InsertionSort(myVec);
       endIns = chrono::steady_clock::now();
-    } // runs algo and stores time.
+    } // runs algorithm and stores time.
     
-    auto endSel = endIns; // by default, runtime zero unless alg is run.
+    auto endSel = endIns;
     if(runAlgs[2] == 1){
       SelectionSort(myVec);
       endSel = chrono::steady_clock::now();
-    } // runs algo and stores time.
+    } // runs algorithm and stores time.
     
-    auto endMer = endSel; // by default, runtime zero unless alg is run.
+    auto endMer = endSel;
     if(runAlgs[3] == 1){
       MergeSort(myVec);
       endMer = chrono::steady_clock::now();
-    } // runs algo and stores time.
-  
+    } // runs algorithm and stores time.
+    
+    auto endQck = endMer;
+    if(runAlgs[4] == 1){
+      QuickSort(myVec, 0, numbersToSort-1);
+      endQck = chrono::steady_clock::now();
+    } // runs algorithm and stores time.
 /*----------------------Calculate Runtime of Each Algorithm-------------------*/
     auto diffBub = endBub - startT;
     auto diffIns = endIns - endBub;
     auto diffSel = endSel - endIns;
     auto diffMer = endMer - endSel;
-    auto diffTot = endMer - startT;
+    auto diffQck = endQck - endMer;
+    auto diffTot = endQck - startT;
     timeBub += chrono::duration <double, milli> (diffBub).count();
     timeIns += chrono::duration <double, milli> (diffIns).count();
     timeSel += chrono::duration <double, milli> (diffSel).count();
     timeMer += chrono::duration <double, milli> (diffMer).count();
+    timeQck += chrono::duration <double, milli> (diffQck).count();
     timeTot += chrono::duration <double> (diffTot).count();
   } // main driver, run sorting algorithms.
 
 /*---------------Calculate Runtime in Hours, Minutes, and Seconds-------------*/
-  double hourTot = floor(timeTot/3600); // hours = seconds / 3600
-  double minsTot = floor(timeTot/60);   // minutes = seconds / 60
-  double hrmnTot = fmod(minsTot, (double) 60); // minutes after hours = mins % 60
-  double secsTot = fmod(timeTot,(double)60);   // seconds after minutes = seconds % 60
+  // hours = seconds / 3600
+  double hourTot = floor(timeTot/3600); 
+  // minutes = seconds / 60
+  double minsTot = floor(timeTot/60);   
+  // minutes after hours = mins % 60
+  double hrmnTot = fmod(minsTot, (double) 60); 
+  // seconds after minutes = seconds % 60
+  double secsTot = fmod(timeTot,(double)60);   
   
 /*--------------------------------Print Runtimes------------------------------*/
-  cout << "Runtime for Bubble Sort:     " << timeBub/runs << " milliseconds (10^-3)." << endl;
-  cout << "Runtime for Insertion Sort:  " << timeIns/runs << " milliseconds (10^-3)." << endl;
-  cout << "Runtime for Selection Sort:  " << timeSel/runs << " milliseconds (10^-3)." << endl;
-  cout << "Runtime for Merge Sort:      " << timeMer/runs << " milliseconds (10^-3)." << endl;
+  cout << "Runtime for Bubble Sort:    " << timeBub/runs << " milliseconds (10^-3)." << endl;
+  cout << "Runtime for Insertion Sort: " << timeIns/runs << " milliseconds (10^-3)." << endl;
+  cout << "Runtime for Selection Sort: " << timeSel/runs << " milliseconds (10^-3)." << endl;
+  cout << "Runtime for Merge Sort:     " << timeMer/runs << " milliseconds (10^-3)." << endl;
+  cout << "Runtime for Quick Sort:     " << timeQck/runs << " milliseconds (10^-3)." << endl;
   printDivider();
   cout << "Above runtimes are averaged over the " << runs << " run(s)." << endl;
   cout << "Average runtime of 1 run:    " << (timeTot/runs) << " seconds." << endl;
@@ -362,7 +423,9 @@ int main() {
   if(timeTot > 3600){ 
     cout << "," << endl << "or " << hourTot << " hour(s), " << hrmnTot << " minute(s) and " << secsTot << " second(s)";
   } // in the event runtime is over an hour.
-  cout << "." << endl; // formatting.
+  cout << "." << endl; 
+  printDivider();
+  // Print all output with correct formatting.
 }
 
 /*--------------------------------End of File---------------------------------*/
